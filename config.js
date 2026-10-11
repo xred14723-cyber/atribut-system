@@ -9,7 +9,7 @@
  */
 const CONFIG = {
   // Paste URL Google Apps Script kamu di sini
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwWV2NMCcHSgGQnL-y4Y7Nsu5HdVPorJ7NNRL10r9GHvApWWxh1-_4XM9_y0QP0B8I/exec',
+SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyTP9zA06w5rjPsBNk7Jrys5Q8ezjnNFkKV9445hUlh4ZO9mA8e8kJIzLbPOqsDLPc/exec',
 
   // URL GitHub Pages kamu (tanpa trailing slash)
   // Contoh: 'https://johndoe.github.io/atribut-system'
