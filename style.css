@@ -1,0 +1,43 @@
+/* ============================================================
+   CUSTOM STYLES — Sistem Atribut
+   (Tailwind CDN handles the bulk; this covers custom needs)
+   ============================================================ */
+
+/* Smooth fade when views appear */
+.view {
+  animation: fadeUp 0.18s ease;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* iOS safe-area bottom padding */
+#bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prevent text selection on buttons */
+button, label { -webkit-tap-highlight-color: transparent; user-select: none; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 4px; }
+
+/* html5-qrcode video fill */
+#scan-reader video { width: 100% !important; border-radius: 0; }
+#scan-reader        { overflow: hidden; }
+
+/* Active nav item color */
+.nav-btn.active { color: #4F46E5 !important; }
+.nav-btn.active span { color: #4F46E5 !important; }
+
+/* Checkbox accent */
+input[type="checkbox"] { accent-color: #4F46E5; cursor: pointer; }
+
+/* Print: only show QR modal content */
+@media print {
+  body > *:not(#print-area) { display: none !important; }
+  #print-area { display: block !important; }
+}

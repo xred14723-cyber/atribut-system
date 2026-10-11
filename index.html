@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4F46E5">
+  <title>Sistem Atribut</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+    integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSE4BunCkp2GS9I5fpyFwY/fGSEKBbR3RN3w=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- QR Scanner (camera) -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    crossorigin="anonymous" referrerpolicy="no-referrer">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 min-h-screen pb-24 overflow-x-hidden">
+
+  <!-- ═══════════════════════════════════════════════
+       GLOBAL OVERLAYS
+  ════════════════════════════════════════════════ -->
+  <!-- Toast notification -->
+  <div id="toast" class="hidden fixed top-4 left-4 right-4 z-50 p-4 rounded-2xl font-semibold text-white text-center shadow-xl"></div>
+
+  <!-- Demo mode banner -->
+  <div id="demo-banner"
+    class="hidden fixed top-0 left-0 right-0 z-40 bg-amber-400 text-amber-900
+      text-xs font-bold text-center py-1.5 px-3 flex items-center justify-center gap-2">
+    <i class="fas fa-flask"></i>
+    MODE DEMO — Data tidak tersimpan ke Google Sheets
+    <i class="fas fa-flask"></i>
+  </div>
+
+  <!-- Loading overlay -->
+  <div id="loading" class="hidden fixed inset-0 bg-black/40 z-40 flex items-center justify-center">
+    <div class="bg-white rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-xl">
+      <div class="w-9 h-9 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+      <p class="text-sm text-gray-500 font-medium">Memuat...</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW: LOGIN
+  ════════════════════════════════════════════════ -->
+  <div id="view-login" class="view hidden min-h-screen flex flex-col items-center justify-center p-5">
+    <div class="w-full max-w-sm">
+
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <div class="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+          <i class="fas fa-tag text-white text-3xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">Sistem Atribut</h1>
+        <p class="text-gray-500 mt-1 text-sm">Masuk sebagai petugas jaga</p>
+      </div>
+
+      <!-- Login Card -->
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <form id="login-form">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            <i class="fas fa-user-shield text-indigo-400 mr-1"></i> Nama Petugas
+          </label>
+          <input id="officer-name" type="text" autocomplete="name" required
+            placeholder="Tulis nama kamu..."
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none
+              focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-800
+              placeholder:text-gray-300 text-base">
+          <button type="submit"
+            class="w-full mt-4 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold
+              rounded-xl transition active:scale-95 shadow-lg shadow-indigo-100 text-base">
+            <i class="fas fa-arrow-right mr-2"></i>Mulai Jaga
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW: DASHBOARD
+  ════════════════════════════════════════════════ -->
+  <div id="view-dashboard" class="view hidden">
+
+    <!-- Header / Hero -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 pt-12 pb-20 px-5">
+      <div class="flex items-center justify-between max-w-md mx-auto">
+        <div>
+          <p class="text-indigo-200 text-sm">Petugas jaga,</p>
+          <h1 id="officer-display" class="text-white font-bold text-xl mt-0.5">-</h1>
+        </div>
+        <button id="change-officer" title="Ganti Petugas"
+          class="p-2.5 bg-indigo-700/60 hover:bg-indigo-700 text-indigo-200
+            rounded-xl transition border border-indigo-500">
+          <i class="fas fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Card (floats over header) -->
+    <div class="px-5 -mt-12 max-w-md mx-auto">
+      <div class="bg-white rounded-3xl shadow-lg p-5 border border-gray-100">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-gray-600 text-sm uppercase tracking-wide">Rekap Pengambilan</h2>
+          <button id="dash-refresh" class="text-indigo-400 hover:text-indigo-600 transition">
+            <i class="fas fa-rotate-right text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="mb-4">
+          <div class="flex justify-between text-xs text-gray-400 mb-1.5">
+            <span>Progress</span>
+            <span id="d-pct" class="font-bold text-indigo-600">0%</span>
+          </div>
+          <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div id="d-bar" class="h-full bg-indigo-500 rounded-full transition-all duration-700" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Stat Boxes -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-gray-50 rounded-2xl p-3 text-center">
+            <p id="d-total" class="text-3xl font-black text-gray-800">0</p>
+            <p class="text-xs text-gray-400 mt-0.5">Total</p>
+          </div>
+          <div class="bg-green-50 rounded-2xl p-3 text-center">
+            <p id="d-sudah" class="text-3xl font-black text-green-600">0</p>
+            <p class="text-xs text-green-400 mt-0.5">Sudah</p>
+          </div>
+          <div class="bg-amber-50 rounded-2xl p-3 text-center">
+            <p id="d-belum" class="text-3xl font-black text-amber-600">0</p>
+            <p class="text-xs text-amber-400 mt-0.5">Belum</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions Grid -->
+      <div class="grid grid-cols-2 gap-3 mt-4 mb-6">
+        <!-- Scan -->
+        <button onclick="nav('scan')"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl text-left
+            transition active:scale-95 shadow-lg shadow-indigo-100">
+          <i class="fas fa-camera text-2xl block mb-2 opacity-90"></i>
+          <p class="font-bold text-base">Scan QR</p>
+          <p class="text-xs text-indigo-200 mt-0.5">Konfirmasi pengambilan</p>
+        </button>
+
+        <!-- Belum Ambil -->
+        <button onclick="nav('pending'); loadPending();"
+          class="bg-amber-500 hover:bg-amber-600 text-white p-5 rounded-2xl text-left
+            transition active:scale-95 shadow-lg shadow-amber-100">
+          <i class="fas fa-clock text-2xl block mb-2 opacity-90"></i>
+          <p class="font-bold text-base">Belum Ambil</p>
+          <p class="text-xs text-amber-100 mt-0.5">Hubungi via WhatsApp</p>
+        </button>
+
+        <!-- Input Data -->
+        <button onclick="nav('input')"
+          class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 p-5 rounded-2xl
+            text-left transition active:scale-95">
+          <i class="fas fa-user-plus text-indigo-400 text-2xl block mb-2"></i>
+          <p class="font-bold text-base">Input Data</p>
+          <p class="text-xs text-gray-400 mt-0.5">Tambah peserta baru</p>
+        </button>
+
+        <!-- Daftar -->
+        <button onclick="nav('list'); loadList();"
+          class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 p-5 rounded-2xl
+            text-left transition active:scale-95">
+          <i class="fas fa-list-ul text-indigo-400 text-2xl block mb-2"></i>
+          <p class="font-bold text-base">Daftar</p>
+          <p class="text-xs text-gray-400 mt-0.5">Lihat semua peserta</p>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW: INPUT DATA
+  ════════════════════════════════════════════════ -->
+  <div id="view-input" class="view hidden px-5 pt-10 pb-8 max-w-md mx-auto">
+
+    <h1 class="text-xl font-bold text-gray-800 mb-0.5">Input Data</h1>
+    <p class="text-sm text-gray-400 mb-6">Tambah peserta & generate QR Code</p>
+
+    <form id="input-form" class="space-y-4">
+
+      <!-- Nama -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+          Nama Lengkap <span class="text-red-400">*</span>
+        </label>
+        <input id="f-nama" type="text" autocomplete="name" required
+          placeholder="Contoh: Budi Santoso"
+          class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white
+            focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800
+            placeholder:text-gray-300">
+      </div>
+
+      <!-- NIM -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+          NIM <span class="text-red-400">*</span>
+        </label>
+        <input id="f-nim" type="text" required
+          placeholder="Contoh: 2021001234"
+          class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white
+            focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800
+            placeholder:text-gray-300">
+      </div>
+
+      <!-- No WA -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+          Nomor WhatsApp
+        </label>
+        <div class="relative">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">+62</span>
+          <input id="f-nowa" type="tel"
+            placeholder="8123456789"
+            class="w-full pl-14 pr-4 py-3 rounded-xl border border-gray-200 bg-white
+              focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800
+              placeholder:text-gray-300">
+        </div>
+      </div>
+
+      <!-- Items checkboxes -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-sm font-semibold text-gray-700">
+            Item Atribut <span class="text-red-400">*</span>
+          </label>
+          <label class="flex items-center gap-1.5 text-sm text-indigo-600 cursor-pointer font-medium">
+            <input id="select-all" type="checkbox" class="w-4 h-4 rounded">
+            <span>Pilih Semua</span>
+          </label>
+        </div>
+        <div id="items-box" class="grid grid-cols-2 gap-2 bg-white border border-gray-200 rounded-2xl p-3">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit"
+        class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold
+          rounded-2xl transition active:scale-95 text-base shadow-lg shadow-indigo-100">
+        <i class="fas fa-qrcode mr-2"></i>Simpan &amp; Generate QR
+      </button>
+
+    </form>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW: DAFTAR PESERTA
+  ════════════════════════════════════════════════ -->
+  <div id="view-list" class="view hidden px-5 pt-10 pb-8 max-w-md mx-auto">
+
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="text-xl font-bold text-gray-800">Daftar Peserta</h1>
+      </div>
+      <button id="list-refresh"
+        class="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl hover:bg-indigo-200 transition">
+        <i class="fas fa-rotate-right text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="flex gap-2 mb-4">
+      <div class="relative flex-1">
+        <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 text-sm"></i>
+        <input id="list-search" type="text" placeholder="Cari nama / NIM..."
+          class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white
+            focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-gray-800
+            placeholder:text-gray-300">
+      </div>
+      <select id="list-filter"
+        class="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm
+          text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="all">Semua</option>
+        <option value="belum">Belum</option>
+        <option value="sudah">Sudah</option>
+      </select>
+    </div>
+
+    <div id="list-container">
+      <div class="text-center py-14 text-gray-300">
+        <i class="fas fa-spinner fa-spin text-4xl block mb-3"></i>
+        <p class="text-gray-400 text-sm">Memuat data...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW: SCAN QR
+  ════════════════════════════════════════════════ -->
+  <div id="view-scan" class="view hidden px-5 pt-10 pb-8 max-w-md mx-auto">
+
+    <h1 class="text-xl font-bold text-gray-800 mb-0.5">Scan QR</h1>
+    <p class="text-sm text-gray-400 mb-5">Arahkan kamera ke QR Code peserta</p>
+
+    <!-- Camera area -->
+    <div class="bg-white rounded-3xl border border-gray-200 overflow-hidden mb-4 shadow-sm">
+      <div id="scan-reader" class="w-full min-h-[220px]">
+        <div class="flex flex-col items-center justify-center h-56 text-gray-200">
+          <i class="fas fa-camera text-6xl mb-3"></i>
+          <p class="text-sm text-gray-300">Kamera tidak aktif</p>
+        </div>
+      </div>
+    </div>
+
+    <button id="scan-start-btn"
+      class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold
+        rounded-2xl transition active:scale-95 text-base shadow-lg shadow-indigo-100">
+      <i class="fas fa-camera mr-2"></i>Mulai Scan
+    </button>
+
+    <button id="scan-stop-btn"
+      class="hidden w-full py-4 bg-red-500 hover:bg-red-600 text-white font-bold
+        rounded-2xl transition active:scale-95 text-base">
+      <i class="fas fa-stop mr-2"></i>Hentikan Scan
+    </button>
+
+    <p class="text-center text-xs text-gray-300 mt-4">
+      <i class="fas fa-shield-halved mr-1"></i>
+      Kamera hanya aktif saat tombol ditekan
+    </p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW: KONFIRMASI (Setelah Scan QR)
+  ════════════════════════════════════════════════ -->
+  <div id="view-confirm" class="view hidden min-h-screen">
+
+    <!-- Confirm header -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 pt-12 pb-8 px-5">
+      <div class="max-w-md mx-auto">
+        <p class="text-indigo-200 text-sm mb-0.5">QR Berhasil Dibaca</p>
+        <h1 class="text-white font-bold text-xl">Konfirmasi Pengambilan</h1>
+      </div>
+    </div>
+
+    <div id="confirm-box" class="px-5 pt-6 pb-8 max-w-md mx-auto">
+      <!-- Content rendered by JS -->
+      <div class="flex flex-col items-center justify-center py-16 gap-3">
+        <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-sm text-gray-400">Mengambil data...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW: BELUM AMBIL
+  ════════════════════════════════════════════════ -->
+  <div id="view-pending" class="view hidden px-5 pt-10 pb-8 max-w-md mx-auto">
+
+    <div class="flex items-center gap-2 mb-0.5">
+      <h1 class="text-xl font-bold text-gray-800">Belum Ambil</h1>
+      <span id="pending-count"
+        class="inline-flex items-center justify-center min-w-[24px] h-6 px-2
+          bg-amber-100 text-amber-700 text-xs font-black rounded-full">0</span>
+    </div>
+    <p class="text-sm text-gray-400 mb-5">Hubungi peserta yang belum mengambil atribut</p>
+
+    <div id="pending-box">
+      <div class="text-center py-14 text-gray-300">
+        <i class="fas fa-spinner fa-spin text-4xl block mb-3"></i>
+        <p class="text-gray-400 text-sm">Memuat data...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       BOTTOM NAVIGATION
+  ════════════════════════════════════════════════ -->
+  <nav id="bottom-nav"
+    class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 shadow-xl">
+    <div class="flex items-end justify-around max-w-md mx-auto px-1 pt-2">
+
+      <!-- Home -->
+      <button class="nav-btn flex-1 flex flex-col items-center pb-3 pt-1 text-gray-400 transition"
+        data-view="dashboard">
+        <i class="fas fa-home text-xl"></i>
+        <span class="text-xs mt-1 font-medium">Home</span>
+      </button>
+
+      <!-- Input -->
+      <button class="nav-btn flex-1 flex flex-col items-center pb-3 pt-1 text-gray-400 transition"
+        data-view="input">
+        <i class="fas fa-user-plus text-xl"></i>
+        <span class="text-xs mt-1 font-medium">Input</span>
+      </button>
+
+      <!-- SCAN (center, elevated) -->
+      <button id="scan-nav-btn" class="flex-1 flex flex-col items-center pb-2">
+        <div class="w-14 h-14 -mt-6 bg-indigo-600 rounded-2xl flex items-center justify-center
+          shadow-lg shadow-indigo-200 active:scale-95 transition">
+          <i class="fas fa-camera text-white text-xl"></i>
+        </div>
+        <span class="text-xs mt-1 font-medium text-gray-400">Scan</span>
+      </button>
+
+      <!-- Daftar -->
+      <button class="nav-btn flex-1 flex flex-col items-center pb-3 pt-1 text-gray-400 transition"
+        data-view="list">
+        <i class="fas fa-list-ul text-xl"></i>
+        <span class="text-xs mt-1 font-medium">Daftar</span>
+      </button>
+
+      <!-- Pending -->
+      <button class="nav-btn flex-1 flex flex-col items-center pb-3 pt-1 text-gray-400 transition"
+        data-view="pending">
+        <i class="fas fa-clock text-xl"></i>
+        <span class="text-xs mt-1 font-medium">Pending</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════
+       QR CODE MODAL (after input submit)
+  ════════════════════════════════════════════════ -->
+  <div id="qr-modal"
+    class="hidden fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl">
+      <div class="p-6">
+
+        <!-- Modal header -->
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="font-bold text-gray-800 text-lg">QR Code Peserta</h2>
+          <button id="qr-modal-close"
+            class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-xl transition">
+            <i class="fas fa-times text-gray-400"></i>
+          </button>
+        </div>
+
+        <!-- Person info -->
+        <p id="qr-m-nama" class="font-bold text-gray-800 text-lg text-center"></p>
+        <p id="qr-m-items" class="text-sm text-gray-400 text-center mt-1 mb-4 leading-relaxed"></p>
+
+        <!-- QR code -->
+        <div id="qr-m-code"
+          class="flex justify-center mb-3 p-4 bg-gray-50 rounded-2xl border border-gray-100"></div>
+
+        <!-- URL -->
+        <p id="qr-m-url" class="text-xs text-gray-300 break-all text-center mb-5 leading-relaxed"></p>
+
+        <!-- Buttons -->
+        <div class="flex gap-3">
+          <button id="qr-modal-print"
+            class="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold
+              rounded-xl transition active:scale-95">
+            <i class="fas fa-print mr-1.5"></i>Print
+          </button>
+          <button onclick="document.getElementById('qr-modal').classList.add('hidden')"
+            class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold
+              rounded-xl transition active:scale-95">
+            <i class="fas fa-check mr-1.5"></i>Selesai
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts (order matters: config first, then app) -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
