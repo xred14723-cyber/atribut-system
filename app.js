@@ -125,40 +125,24 @@ function nav(view) {
 }
 
 // ─────────────────────────────────────────────
-// API — menggunakan JSONP agar 100% bebas blokir CORS browser
+// API — Fetch standar dengan handling redirect Google Apps Script
 // ─────────────────────────────────────────────
-function api(params) {
+async function api(params) {
   if (isDemoMode()) return demoAPI(params);
 
-  return new Promise((resolve, reject) => {
-    const callbackName = 'gas_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-    const query = new URLSearchParams({ ...params, callback: callbackName }).toString();
-    const script = document.createElement('script');
-    script.src = CONFIG.SCRIPT_URL + '?' + query;
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error('Koneksi timeout (Google Apps Script tidak merespon)'));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[callbackName] = function (data) {
-      cleanup();
-      resolve(data);
-    };
-
-    script.onerror = function () {
-      cleanup();
-      reject(new Error('Gagal menghubungi Google Apps Script'));
-    };
-
-    document.head.appendChild(script);
+  const url = CONFIG.SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url, {
+    method: 'GET',
+    mode: 'cors',
+    redirect: 'follow',
+    headers: { 'Accept': 'application/json' }
   });
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: Gagal memuat`);
+  }
+
+  return await res.json();
 }
 
 // ─────────────────────────────────────────────
