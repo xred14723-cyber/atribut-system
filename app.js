@@ -125,15 +125,40 @@ function nav(view) {
 }
 
 // ─────────────────────────────────────────────
-// API — all calls via GET (avoids CORS preflight)
-// Falls back to demoAPI() when SCRIPT_URL not configured
+// API — menggunakan JSONP agar 100% bebas blokir CORS browser
 // ─────────────────────────────────────────────
-async function api(params) {
+function api(params) {
   if (isDemoMode()) return demoAPI(params);
-  const url = CONFIG.SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-  const res = await fetch(url, { redirect: 'follow' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+
+  return new Promise((resolve, reject) => {
+    const callbackName = 'gas_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    const query = new URLSearchParams({ ...params, callback: callbackName }).toString();
+    const script = document.createElement('script');
+    script.src = CONFIG.SCRIPT_URL + '?' + query;
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Koneksi timeout (Google Apps Script tidak merespon)'));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[callbackName] = function (data) {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = function () {
+      cleanup();
+      reject(new Error('Gagal menghubungi Google Apps Script'));
+    };
+
+    document.head.appendChild(script);
+  });
 }
 
 // ─────────────────────────────────────────────
